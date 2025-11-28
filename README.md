@@ -109,6 +109,40 @@ const result = await shipi18n.translateI18next({
 });
 ```
 
+### Fallback Options
+
+Handle missing translations gracefully with built-in fallback support:
+
+```typescript
+const result = await shipi18n.translateJSON({
+  content: { greeting: 'Hello', farewell: 'Goodbye' },
+  sourceLanguage: 'en',
+  targetLanguages: ['es', 'pt-BR', 'zh-TW'],
+  fallback: {
+    fallbackToSource: true,    // Use source content when translation missing (default: true)
+    regionalFallback: true,    // pt-BR → pt, zh-TW → zh fallback (default: true)
+    fallbackLanguage: 'en',    // Custom fallback language (optional)
+  },
+});
+
+// If pt-BR translation fails, uses pt translation
+// If pt also fails, uses English source content
+
+// Check what fallbacks were used:
+if (result.fallbackInfo?.used) {
+  console.log(result.fallbackInfo.regionalFallbacks);      // { 'pt-BR': 'pt' }
+  console.log(result.fallbackInfo.languagesFallbackToSource); // ['zh-TW']
+  console.log(result.fallbackInfo.keysFallback);           // { es: ['farewell'] }
+}
+```
+
+**Fallback behavior:**
+| Scenario | Behavior |
+|----------|----------|
+| Missing translation for language | Falls back to regional variant (pt-BR → pt), then source |
+| Missing translation for key | Fills key from source content |
+| API error | Returns source content for all languages (if enabled) |
+
 ## Examples
 
 ### Nested JSON with Namespaces
