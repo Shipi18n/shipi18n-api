@@ -29,6 +29,15 @@ export interface Shipi18nConfig {
   timeout?: number;
 }
 
+export interface FallbackOptions {
+  /** Use source language content when translation is missing (default: true) */
+  fallbackToSource?: boolean;
+  /** Enable regional fallback e.g., pt-BR → pt (default: true) */
+  regionalFallback?: boolean;
+  /** Custom fallback language code (overrides source language) */
+  fallbackLanguage?: string;
+}
+
 export interface TranslateJSONOptions {
   /** JSON content to translate (object or JSON string) */
   content: Record<string, unknown> | string;
@@ -46,6 +55,8 @@ export interface TranslateJSONOptions {
   groupByNamespace?: 'auto' | 'true' | 'false';
   /** Export translations split by namespace */
   exportPerNamespace?: boolean;
+  /** Fallback options for missing translations */
+  fallback?: FallbackOptions;
 }
 
 export interface TranslateTextOptions {
@@ -57,11 +68,24 @@ export interface TranslateTextOptions {
   targetLanguages: string[];
   /** Preserve placeholders like {name}, {{count}}, etc. (default: true) */
   preservePlaceholders?: boolean;
+  /** Fallback options for missing translations */
+  fallback?: FallbackOptions;
+}
+
+export interface FallbackInfo {
+  /** Whether any fallbacks were used */
+  used: boolean;
+  /** Languages that fell back to source */
+  languagesFallbackToSource: string[];
+  /** Regional fallbacks applied (e.g., { 'pt-BR': 'pt' }) */
+  regionalFallbacks: Record<string, string>;
+  /** Keys that used fallback values, by language */
+  keysFallback: Record<string, string[]>;
 }
 
 export interface TranslationResult {
   /** Translations keyed by language code */
-  [languageCode: string]: Record<string, unknown> | TranslationPair[] | TranslationWarning[] | NamespaceInfo | undefined;
+  [languageCode: string]: Record<string, unknown> | TranslationPair[] | TranslationWarning[] | NamespaceInfo | FallbackInfo | undefined;
 }
 
 export interface TranslationPair {
@@ -119,6 +143,7 @@ export class Shipi18n {
    *   content: { greeting: 'Hello', farewell: 'Goodbye' },
    *   sourceLanguage: 'en',
    *   targetLanguages: ['es', 'fr'],
+   *   fallback: { fallbackToSource: true, regionalFallback: true },
    * });
    * ```
    */
@@ -132,15 +157,26 @@ export class Shipi18n {
       namespace,
       groupByNamespace = 'auto',
       exportPerNamespace = false,
+      fallback = {},
     } = options;
 
-    const text = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+    const {
+      fallbackToSource = true,
+      regionalFallback = true,
+      fallbackLanguage,
+    } = fallback;
 
-    return this.request('/api/translate', {
+    const text = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+    const sourceContent = typeof content === 'string' ? JSON.parse(content) : content;
+
+    // Process regional fallbacks - separate base languages from regional variants
+    const { processedTargets, regionalMap } = this.processRegionalLanguages(targetLanguages, regionalFallback);
+
+    const result = await this.request<TranslationResult>('/api/translate', {
       inputMethod: 'text',
       text,
       sourceLanguage,
-      targetLanguages,
+      targetLanguages: processedTargets,
       outputFormat: 'json',
       preservePlaceholders,
       enablePluralization: enablePluralization ? 'true' : 'false',
@@ -148,6 +184,18 @@ export class Shipi18n {
       groupByNamespace,
       exportPerNamespace,
     });
+
+    // Apply fallback logic
+    return this.applyFallbacks(
+      result,
+      sourceContent,
+      targetLanguages,
+      sourceLanguage,
+      fallbackToSource,
+      regionalFallback,
+      fallbackLanguage,
+      regionalMap
+    );
   }
 
   /**
@@ -262,6 +310,197 @@ export class Shipi18n {
 
       throw new Shipi18nError('Unknown error occurred', 500, 'UNKNOWN_ERROR');
     }
+  }
+
+  /**
+   * Process regional language codes and create a mapping for fallbacks
+   * e.g., ['es', 'pt-BR', 'zh-TW'] -> { processedTargets: ['es', 'pt', 'zh'], regionalMap: { 'pt-BR': 'pt', 'zh-TW': 'zh' } }
+   */
+  private processRegionalLanguages(
+    targetLanguages: string[],
+    regionalFallback: boolean
+  ): { processedTargets: string[]; regionalMap: Record<string, string> } {
+    const regionalMap: Record<string, string> = {};
+    const processedTargets: string[] = [];
+    const baseLanguagesAdded = new Set<string>();
+
+    for (const lang of targetLanguages) {
+      if (lang.includes('-') && regionalFallback) {
+        const baseLang = lang.split('-')[0];
+        regionalMap[lang] = baseLang;
+
+        // Add base language if not already in the list
+        if (!baseLanguagesAdded.has(baseLang) && !targetLanguages.includes(baseLang)) {
+          processedTargets.push(baseLang);
+          baseLanguagesAdded.add(baseLang);
+        }
+      }
+
+      // Always include the original language
+      if (!processedTargets.includes(lang)) {
+        processedTargets.push(lang);
+      }
+    }
+
+    return { processedTargets, regionalMap };
+  }
+
+  /**
+   * Apply fallback logic to translation results
+   */
+  private applyFallbacks(
+    result: TranslationResult,
+    sourceContent: Record<string, unknown>,
+    targetLanguages: string[],
+    sourceLanguage: string,
+    fallbackToSource: boolean,
+    regionalFallback: boolean,
+    fallbackLanguage: string | undefined,
+    regionalMap: Record<string, string>
+  ): TranslationResult {
+    const fallbackInfo: FallbackInfo = {
+      used: false,
+      languagesFallbackToSource: [],
+      regionalFallbacks: {},
+      keysFallback: {},
+    };
+
+    const effectiveFallbackLang = fallbackLanguage || sourceLanguage;
+
+    for (const lang of targetLanguages) {
+      const translation = result[lang] as Record<string, unknown> | undefined;
+
+      // Case 1: Entire language missing - try regional fallback first, then source
+      if (!translation || Object.keys(translation).length === 0) {
+        // Try regional fallback (e.g., pt-BR -> pt)
+        if (regionalFallback && regionalMap[lang]) {
+          const baseLang = regionalMap[lang];
+          const baseTranslation = result[baseLang] as Record<string, unknown> | undefined;
+
+          if (baseTranslation && Object.keys(baseTranslation).length > 0) {
+            result[lang] = { ...baseTranslation };
+            fallbackInfo.used = true;
+            fallbackInfo.regionalFallbacks[lang] = baseLang;
+            continue;
+          }
+        }
+
+        // Fall back to source language
+        if (fallbackToSource) {
+          result[lang] = { ...sourceContent };
+          fallbackInfo.used = true;
+          fallbackInfo.languagesFallbackToSource.push(lang);
+        }
+        continue;
+      }
+
+      // Case 2: Check for missing keys within the translation
+      if (fallbackToSource && typeof translation === 'object') {
+        const missingKeys = this.findMissingKeys(sourceContent, translation);
+
+        if (missingKeys.length > 0) {
+          fallbackInfo.used = true;
+          fallbackInfo.keysFallback[lang] = missingKeys;
+
+          // Fill in missing keys from regional fallback or source
+          for (const key of missingKeys) {
+            const fallbackValue = this.getNestedValue(sourceContent, key);
+
+            // Try regional fallback first
+            if (regionalFallback && regionalMap[lang]) {
+              const baseLang = regionalMap[lang];
+              const baseTranslation = result[baseLang] as Record<string, unknown> | undefined;
+              const baseValue = baseTranslation ? this.getNestedValue(baseTranslation, key) : undefined;
+
+              if (baseValue !== undefined) {
+                this.setNestedValue(translation, key, baseValue);
+                continue;
+              }
+            }
+
+            // Fall back to source
+            if (fallbackValue !== undefined) {
+              this.setNestedValue(translation, key, fallbackValue);
+            }
+          }
+        }
+      }
+    }
+
+    // Add fallback info to result if any fallbacks were used
+    if (fallbackInfo.used) {
+      result.fallbackInfo = fallbackInfo;
+    }
+
+    return result;
+  }
+
+  /**
+   * Find keys in source that are missing in translation
+   */
+  private findMissingKeys(
+    source: Record<string, unknown>,
+    translation: Record<string, unknown>,
+    prefix = ''
+  ): string[] {
+    const missing: string[] = [];
+
+    for (const key of Object.keys(source)) {
+      const fullKey = prefix ? `${prefix}.${key}` : key;
+      const sourceValue = source[key];
+      const translationValue = translation[key];
+
+      if (translationValue === undefined || translationValue === null || translationValue === '') {
+        missing.push(fullKey);
+      } else if (
+        typeof sourceValue === 'object' &&
+        sourceValue !== null &&
+        !Array.isArray(sourceValue) &&
+        typeof translationValue === 'object' &&
+        translationValue !== null
+      ) {
+        // Recurse into nested objects
+        missing.push(
+          ...this.findMissingKeys(
+            sourceValue as Record<string, unknown>,
+            translationValue as Record<string, unknown>,
+            fullKey
+          )
+        );
+      }
+    }
+
+    return missing;
+  }
+
+  /**
+   * Get a nested value from an object using dot notation
+   */
+  private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+    return path.split('.').reduce((current: unknown, key: string) => {
+      if (current && typeof current === 'object' && key in (current as Record<string, unknown>)) {
+        return (current as Record<string, unknown>)[key];
+      }
+      return undefined;
+    }, obj);
+  }
+
+  /**
+   * Set a nested value in an object using dot notation
+   */
+  private setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
+    const keys = path.split('.');
+    let current = obj;
+
+    for (let i = 0; i < keys.length - 1; i++) {
+      const key = keys[i];
+      if (!(key in current) || typeof current[key] !== 'object') {
+        current[key] = {};
+      }
+      current = current[key] as Record<string, unknown>;
+    }
+
+    current[keys[keys.length - 1]] = value;
   }
 }
 
