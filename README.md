@@ -9,6 +9,14 @@
 
 Official Node.js client for the Shipi18n translation API. Translate JSON, text, and i18n files with a simple, type-safe API.
 
+## Why Shipi18n?
+
+- **Stop copy-pasting into Google Translate** - One API call translates to 100+ languages
+- **Placeholders stay intact** - `{name}`, `{{count}}`, `%s` are preserved automatically
+- **i18next-native** - Built-in pluralization, namespaces, ICU MessageFormat support
+- **90-day Translation Memory** - Same content? Cached. No extra cost.
+- **Key-based pricing** - Pay for unique strings, not characters or API calls
+
 ## Installation
 
 ```bash
