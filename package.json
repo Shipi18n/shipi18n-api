@@ -1,6 +1,6 @@
 {
   "name": "@shipi18n/api",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Official Shipi18n API client for Node.js - translate JSON, text, and i18n files",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
