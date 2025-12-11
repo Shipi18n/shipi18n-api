@@ -130,7 +130,7 @@ export class Shipi18n {
     }
 
     this.apiKey = config.apiKey;
-    this.baseUrl = config.baseUrl || 'https://api.shipi18n.com';
+    this.baseUrl = config.baseUrl || 'https://ydjkwckq3f.execute-api.us-east-1.amazonaws.com';
     this.timeout = config.timeout || 30000;
   }
 
