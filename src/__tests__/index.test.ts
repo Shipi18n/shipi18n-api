@@ -14,7 +14,7 @@ describe('Shipi18n', () => {
 
     it('uses default baseUrl', () => {
       const client = new Shipi18n({ apiKey: 'test-key' });
-      expect(client['baseUrl']).toBe('https://api.shipi18n.com');
+      expect(client['baseUrl']).toBe('https://ydjkwckq3f.execute-api.us-east-1.amazonaws.com');
     });
 
     it('allows custom baseUrl', () => {

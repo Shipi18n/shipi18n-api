@@ -23,7 +23,7 @@
 export interface Shipi18nConfig {
   /** Your Shipi18n API key */
   apiKey: string;
-  /** API base URL (default: https://api.shipi18n.com) */
+  /** API base URL (default: https://ydjkwckq3f.execute-api.us-east-1.amazonaws.com) */
   baseUrl?: string;
   /** Request timeout in milliseconds (default: 30000) */
   timeout?: number;

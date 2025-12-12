@@ -93,7 +93,7 @@ export async function translate(options: TranslateOptions): Promise<TranslationR
   }
 
   try {
-    const response = await fetch('https://api.shipi18n.com/translate', {
+    const response = await fetch('https://ydjkwckq3f.execute-api.us-east-1.amazonaws.com/translate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

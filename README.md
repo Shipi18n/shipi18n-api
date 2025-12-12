@@ -62,7 +62,7 @@ console.log(result.de); // { greeting: 'Hallo', farewell: 'Auf Wiedersehen' }
 ```typescript
 const shipi18n = new Shipi18n({
   apiKey: 'your-api-key',     // Required
-  baseUrl: 'https://api.shipi18n.com', // Optional, default shown
+  baseUrl: 'https://ydjkwckq3f.execute-api.us-east-1.amazonaws.com', // Optional, default shown
   timeout: 30000,             // Optional, request timeout in ms
 });
 ```
