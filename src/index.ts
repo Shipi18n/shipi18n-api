@@ -176,9 +176,9 @@ export class Shipi18n {
       inputMethod: 'text',
       text,
       sourceLanguage,
-      targetLanguages: processedTargets,
+      targetLanguages: JSON.stringify(processedTargets),
       outputFormat: 'json',
-      preservePlaceholders,
+      preservePlaceholders: String(preservePlaceholders),
       enablePluralization: enablePluralization ? 'true' : 'false',
       namespace,
       groupByNamespace,
@@ -224,9 +224,9 @@ export class Shipi18n {
       inputMethod: 'text',
       text,
       sourceLanguage,
-      targetLanguages,
+      targetLanguages: JSON.stringify(targetLanguages),
       outputFormat: 'text',
-      preservePlaceholders,
+      preservePlaceholders: String(preservePlaceholders),
     });
   }
 
