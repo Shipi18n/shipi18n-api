@@ -78,11 +78,20 @@ const result = await shipi18n.translateJSON({
   targetLanguages: ['es', 'fr'],
   preservePlaceholders: true,      // Default: true
   enablePluralization: true,       // Default: true (i18next-style)
+  htmlHandling: 'none',            // 'none' | 'strip' | 'decode' | 'preserve'
   namespace: 'common',             // Optional: wrap output in namespace
   groupByNamespace: 'auto',        // 'auto' | 'true' | 'false'
   exportPerNamespace: false,       // Split output by namespace
 });
 ```
+
+**HTML Handling Modes:**
+| Mode | Description |
+|------|-------------|
+| `none` | Leave HTML as-is (default) |
+| `strip` | Remove all HTML tags |
+| `decode` | Decode HTML entities (`&amp;` → `&`) |
+| `preserve` | Keep HTML tags and translate text between them |
 
 ### translateText(options)
 
@@ -94,6 +103,7 @@ const result = await shipi18n.translateText({
   sourceLanguage: 'en',
   targetLanguages: ['es', 'fr'],
   preservePlaceholders: true,
+  htmlHandling: 'none',            // 'none' | 'strip' | 'decode' | 'preserve'
 });
 
 // result.es = [{ original: 'Hello, world!', translated: '¡Hola, mundo!' }]

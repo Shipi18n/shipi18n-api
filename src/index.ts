@@ -38,6 +38,9 @@ export interface FallbackOptions {
   fallbackLanguage?: string;
 }
 
+/** HTML handling modes for source text */
+export type HtmlHandlingMode = 'none' | 'strip' | 'decode' | 'preserve';
+
 export interface TranslateJSONOptions {
   /** JSON content to translate (object or JSON string) */
   content: Record<string, unknown> | string;
@@ -49,6 +52,8 @@ export interface TranslateJSONOptions {
   preservePlaceholders?: boolean;
   /** Enable i18next pluralization support (default: true) */
   enablePluralization?: boolean;
+  /** How to handle HTML in source text: none, strip, decode, preserve (default: 'none') */
+  htmlHandling?: HtmlHandlingMode;
   /** Wrap output in a namespace (e.g., 'common') */
   namespace?: string;
   /** Auto-detect and group by namespaces: 'auto' | 'true' | 'false' (default: 'auto') */
@@ -68,6 +73,8 @@ export interface TranslateTextOptions {
   targetLanguages: string[];
   /** Preserve placeholders like {name}, {{count}}, etc. (default: true) */
   preservePlaceholders?: boolean;
+  /** How to handle HTML in source text: none, strip, decode, preserve (default: 'none') */
+  htmlHandling?: HtmlHandlingMode;
   /** Fallback options for missing translations */
   fallback?: FallbackOptions;
 }
@@ -154,6 +161,7 @@ export class Shipi18n {
       targetLanguages,
       preservePlaceholders = true,
       enablePluralization = true,
+      htmlHandling = 'none',
       namespace,
       groupByNamespace = 'auto',
       exportPerNamespace = false,
@@ -180,6 +188,7 @@ export class Shipi18n {
       outputFormat: 'json',
       preservePlaceholders: String(preservePlaceholders),
       enablePluralization: enablePluralization ? 'true' : 'false',
+      htmlHandling,
       namespace,
       groupByNamespace,
       exportPerNamespace,
@@ -216,6 +225,7 @@ export class Shipi18n {
       sourceLanguage,
       targetLanguages,
       preservePlaceholders = true,
+      htmlHandling = 'none',
     } = options;
 
     const text = Array.isArray(content) ? content.join('\n') : content;
@@ -227,6 +237,7 @@ export class Shipi18n {
       targetLanguages: JSON.stringify(targetLanguages),
       outputFormat: 'text',
       preservePlaceholders: String(preservePlaceholders),
+      htmlHandling,
     });
   }
 
