@@ -66,6 +66,8 @@ export interface TranslateJSONOptions {
   skipKeys?: string[];
   /** Path patterns to skip (supports glob wildcards, e.g., ['states.*', 'config.*.internal']) */
   skipPaths?: string[];
+  /** Per-key context hints for disambiguation (e.g., { 'close': 'button - dismiss window' }) */
+  contextAnnotations?: Record<string, string>;
 }
 
 export interface TranslateTextOptions {
@@ -96,7 +98,7 @@ export interface FallbackInfo {
 
 export interface TranslationResult {
   /** Translations keyed by language code */
-  [languageCode: string]: Record<string, unknown> | TranslationPair[] | TranslationWarning[] | NamespaceInfo | FallbackInfo | SkippedInfo | undefined;
+  [languageCode: string]: Record<string, unknown> | TranslationPair[] | TranslationWarning[] | NamespaceInfo | FallbackInfo | SkippedInfo | ContextEnhancedInfo | undefined;
 }
 
 export interface TranslationPair {
@@ -122,6 +124,13 @@ export interface SkippedInfo {
   /** Number of keys that were skipped */
   count: number;
   /** Array of key paths that were skipped */
+  keys: string[];
+}
+
+export interface ContextEnhancedInfo {
+  /** Number of keys translated with context annotations */
+  count: number;
+  /** Array of key paths that used context-aware translation */
   keys: string[];
 }
 
@@ -181,6 +190,7 @@ export class Shipi18n {
       fallback = {},
       skipKeys = [],
       skipPaths = [],
+      contextAnnotations = {},
     } = options;
 
     const {
@@ -209,6 +219,7 @@ export class Shipi18n {
       exportPerNamespace,
       skipKeys,
       skipPaths,
+      contextAnnotations,
     });
 
     // Apply fallback logic
