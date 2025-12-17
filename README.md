@@ -82,6 +82,8 @@ const result = await shipi18n.translateJSON({
   namespace: 'common',             // Optional: wrap output in namespace
   groupByNamespace: 'auto',        // 'auto' | 'true' | 'false'
   exportPerNamespace: false,       // Split output by namespace
+  skipKeys: ['brandName'],         // Skip exact key paths from translation
+  skipPaths: ['states.*'],         // Skip using glob patterns (*, **)
 });
 ```
 
@@ -160,6 +162,42 @@ if (result.fallbackInfo?.used) {
 | Missing translation for language | Falls back to regional variant (pt-BR → pt), then source |
 | Missing translation for key | Fills key from source content |
 | API error | Returns source content for all languages (if enabled) |
+
+### Skipping Keys
+
+Exclude specific keys or patterns from translation - useful for brand names, US state codes, or config values that should remain untranslated:
+
+```typescript
+const result = await shipi18n.translateJSON({
+  content: {
+    greeting: 'Hello',
+    brandName: 'Acme Inc',           // Should stay as-is
+    states: { CA: 'California', NY: 'New York' }, // State names
+    config: { api: { secret: 'xyz' } },
+  },
+  sourceLanguage: 'en',
+  targetLanguages: ['es', 'fr'],
+  skipKeys: ['brandName', 'config.api.secret'],  // Exact paths
+  skipPaths: ['states.*'],                        // Glob patterns
+});
+
+// Skipped keys are preserved in original language
+// result.es.brandName === 'Acme Inc'
+// result.es.states.CA === 'California'
+
+// Check what was skipped:
+if (result.skipped) {
+  console.log(`Skipped ${result.skipped.count} keys:`, result.skipped.keys);
+}
+```
+
+**Pattern Matching:**
+| Pattern | Matches |
+|---------|---------|
+| `states.CA` | Exact path only |
+| `states.*` | `states.CA`, `states.NY` (single level) |
+| `config.*.secret` | `config.api.secret`, `config.db.secret` |
+| `**.internal` | Any path ending with `.internal` |
 
 ## Examples
 

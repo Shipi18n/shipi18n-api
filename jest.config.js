@@ -1,9 +1,17 @@
-/** @type {import('jest').Config} */
-module.exports = {
+export default {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/src'],
+  extensionsToTreatAsEsm: ['.ts'],
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
+  transform: {
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        useESM: true,
+      },
+    ],
+  },
   testMatch: ['**/__tests__/**/*.test.ts'],
-  collectCoverageFrom: ['src/**/*.ts', '!src/**/__tests__/**'],
-  coverageReporters: ['text', 'lcov', 'clover'],
-};
+}

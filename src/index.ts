@@ -62,6 +62,10 @@ export interface TranslateJSONOptions {
   exportPerNamespace?: boolean;
   /** Fallback options for missing translations */
   fallback?: FallbackOptions;
+  /** Keys to skip from translation (exact paths, e.g., ['brandName', 'company.legal.name']) */
+  skipKeys?: string[];
+  /** Path patterns to skip (supports glob wildcards, e.g., ['states.*', 'config.*.internal']) */
+  skipPaths?: string[];
 }
 
 export interface TranslateTextOptions {
@@ -92,7 +96,7 @@ export interface FallbackInfo {
 
 export interface TranslationResult {
   /** Translations keyed by language code */
-  [languageCode: string]: Record<string, unknown> | TranslationPair[] | TranslationWarning[] | NamespaceInfo | FallbackInfo | undefined;
+  [languageCode: string]: Record<string, unknown> | TranslationPair[] | TranslationWarning[] | NamespaceInfo | FallbackInfo | SkippedInfo | undefined;
 }
 
 export interface TranslationPair {
@@ -112,6 +116,13 @@ export interface NamespaceInfo {
   namespaces?: Array<{ name: string; keyCount: number }>;
   userAssigned?: boolean;
   namespace?: string;
+}
+
+export interface SkippedInfo {
+  /** Number of keys that were skipped */
+  count: number;
+  /** Array of key paths that were skipped */
+  keys: string[];
 }
 
 export class Shipi18nError extends Error {
@@ -147,10 +158,12 @@ export class Shipi18n {
    * @example
    * ```typescript
    * const result = await shipi18n.translateJSON({
-   *   content: { greeting: 'Hello', farewell: 'Goodbye' },
+   *   content: { greeting: 'Hello', farewell: 'Goodbye', brandName: 'Acme Inc' },
    *   sourceLanguage: 'en',
    *   targetLanguages: ['es', 'fr'],
    *   fallback: { fallbackToSource: true, regionalFallback: true },
+   *   skipKeys: ['brandName'],          // Skip exact key paths
+   *   skipPaths: ['states.*', '*.internal'], // Skip using glob patterns
    * });
    * ```
    */
@@ -166,6 +179,8 @@ export class Shipi18n {
       groupByNamespace = 'auto',
       exportPerNamespace = false,
       fallback = {},
+      skipKeys = [],
+      skipPaths = [],
     } = options;
 
     const {
@@ -192,6 +207,8 @@ export class Shipi18n {
       namespace,
       groupByNamespace,
       exportPerNamespace,
+      skipKeys,
+      skipPaths,
     });
 
     // Apply fallback logic
