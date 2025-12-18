@@ -84,6 +84,10 @@ const result = await shipi18n.translateJSON({
   exportPerNamespace: false,       // Split output by namespace
   skipKeys: ['brandName'],         // Skip exact key paths from translation
   skipPaths: ['states.*'],         // Skip using glob patterns (*, **)
+  contextAnnotations: {            // Context hints for ambiguous words
+    'close': 'button - dismiss window',
+    'address': 'form field - location',
+  },
 });
 ```
 
@@ -198,6 +202,61 @@ if (result.skipped) {
 | `states.*` | `states.CA`, `states.NY` (single level) |
 | `config.*.secret` | `config.api.secret`, `config.db.secret` |
 | `**.internal` | Any path ending with `.internal` |
+
+### Context Annotations
+
+Improve translation quality for ambiguous words by providing context hints:
+
+```typescript
+const result = await shipi18n.translateJSON({
+  content: {
+    close: 'Close',
+    address: 'Address',
+    greeting: 'Hello',
+  },
+  sourceLanguage: 'en',
+  targetLanguages: ['es'],
+  contextAnnotations: {
+    'close': 'button - dismiss window',      // Not "nearby"
+    'address': 'form field - physical location', // Not "to address someone"
+  },
+});
+
+// Result: "close" → "Cerrar" (not "Cerca")
+// Result: "address" → "Dirección" (not "Dirigirse")
+
+// Check which keys used context:
+if (result.contextEnhanced) {
+  console.log(`${result.contextEnhanced.count} keys used context annotations`);
+  console.log(result.contextEnhanced.keys); // ['close', 'address']
+}
+```
+
+### Legal Content Warning
+
+The API automatically warns when translating keys that may contain legal content:
+
+```typescript
+const result = await shipi18n.translateJSON({
+  content: {
+    terms_of_service: 'Terms of Service',
+    privacy_policy: 'Privacy Policy',
+    greeting: 'Hello',
+  },
+  sourceLanguage: 'en',
+  targetLanguages: ['es'],
+});
+
+// Check for legal content warnings:
+const legalWarning = result.warnings?.find(w => w.type === 'legal_content');
+if (legalWarning) {
+  console.warn(legalWarning.message);
+  // "⚠️ Legal content detected (2 keys). Machine-translated legal text may not be legally binding."
+  console.log(legalWarning.details.keys); // ['terms_of_service', 'privacy_policy']
+}
+```
+
+**Detected patterns:** terms, privacy, disclaimer, legal, tos, eula, copyright, license, gdpr, cookie_policy, compliance, data_protection, refund, warranty
 
 ## Examples
 
